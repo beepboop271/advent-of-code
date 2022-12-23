@@ -1,4 +1,5 @@
-import Data.Set (Set, empty, insert, size)
+import Data.List (foldl')
+import Data.Set (Set, insert, size, fromList)
 import Text.Printf (printf)
 
 type Point = (Int, Int)
@@ -23,26 +24,17 @@ findStep head@(hx, hy) next@(nx, ny)
     dx = hx - nx
     dy = hy - ny
 
-stepSingle :: Visited -> Rope -> Point -> (Rope, Visited)
-stepSingle v rope (0, 0) = (rope, v)
-stepSingle v ((hx, hy):rest) (dx, dy) = case rest of
-  []     -> ([head'], insert head' v)
-  next:_ -> let (rest', v') = stepSingle v rest (findStep head' next)
-            in (head':rest', v')
+stepSingle :: Point -> Visited -> Rope -> (Visited, Rope)
+stepSingle (0, 0) v rope = (v, rope)
+stepSingle (dx, dy) v ((hx, hy):rest) = case rest of
+  []     -> (insert head' v, [head'])
+  next:_ -> let (v', rest') = stepSingle (findStep head' next) v rest
+            in (v', head':rest')
   where
     head' = (hx+dx, hy+dy)
 
-stepN :: Int -> Visited -> Rope -> Point -> (Rope, Visited)
-stepN 0 v r _ = (r, v)
-stepN n v r p = stepN (n-1) v' r' p
-  where
-    (r', v') = stepSingle v r p
-
-stepAll :: Visited -> Rope -> [(Int, Int, Int)] -> Visited
-stepAll v r [] = v
-stepAll v r ((dx, dy, amount):rest) = stepAll v' r' rest
-  where
-    (r', v') = stepN amount v r (dx, dy)
+stepN :: Visited -> Rope -> (Int, Int, Int) -> (Visited, Rope)
+stepN v r (dx, dy, n) = iterate (uncurry (stepSingle (dx, dy))) (v, r) !! n
 
 parse :: String -> (Int, Int, Int)
 parse (d:' ':num) = case d of
@@ -55,9 +47,10 @@ parse (d:' ':num) = case d of
 parse _ = error ""
 
 processInput :: Int -> [String] -> String
-processInput n = show
+processInput length = show
   . size
-  . stepAll (insert (0, 0) empty) (replicate n (0, 0))
+  . fst
+  . foldl' (uncurry stepN) (fromList [(0, 0)], replicate length (0, 0))
   . map parse
 
 main = interact (
