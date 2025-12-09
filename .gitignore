@@ -1,1 +1,6 @@
 */input
+*/*.in
+
+.idea
+.scala-build
+.bsp
